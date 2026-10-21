@@ -1,0 +1,11 @@
+symbols build/game.noi
+run 5
+poke bench_mode 3 w1
+poke bench_end 22 w2
+poke pangle 90 w2
+waituntil bench_n >= 2 3000 w2
+cgstart
+poke bench_go 1 w1
+waituntil bench_n >= 22 6000 w2
+cgstop
+cgdump /tmp/cg.txt

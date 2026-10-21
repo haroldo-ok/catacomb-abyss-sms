@@ -1,0 +1,28 @@
+symbols build/game.noi
+run 200
+screenshot /tmp/s/a_attract.ppm
+tap 1
+run 120
+screenshot /tmp/s/b_challenge.ppm
+tap 1
+run 120
+screenshot /tmp/s/c_novice.ppm
+tap 1
+run 120
+screenshot /tmp/s/d_story.ppm
+tap 1
+run 300
+screenshot /tmp/s/e_enter.ppm
+print ingame w1
+print playstate w1
+run 300
+screenshot /tmp/s/f_play.ppm
+print time_count w2
+cgstart
+hold up
+run 240
+cgstop
+hold none
+cgdump /tmp/s/cg_play.txt
+screenshot /tmp/s/g_moved.ppm
+print time_count w2

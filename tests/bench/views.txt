@@ -1,0 +1,15 @@
+symbols build/game.noi
+run 130
+poke pangle 180 w2
+run 30
+screenshot /tmp/v_a.ppm
+poke pangle 90 w2
+run 30
+screenshot /tmp/v_b.ppm
+poke pangle 270 w2
+run 30
+screenshot /tmp/v_c.ppm
+poke bench_spr 1 w1
+poke pangle 90 w2
+run 30
+screenshot /tmp/v_d.ppm

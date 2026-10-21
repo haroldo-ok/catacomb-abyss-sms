@@ -1,0 +1,135 @@
+#include "hw.h"
+#include "assets.h"
+#include "screen.h"
+#include "cartram.h"
+#include "render.h"
+#include <string.h>
+
+/* renderer test bench (temporary until the game logic is ported) */
+u16 px, py;         /* 8.8 */
+u16 pangle;         /* degrees */
+u8  last_frames;
+u8  mapnum;
+
+static s16 fcos(u16 deg)    /* cos * 256 */
+{
+    u16 a = deg * 10, ic;
+    s16 v;
+    u8 neg = 0;
+    u8 old = MapSlot1;
+    while (a >= 3600) a -= 3600;
+    if (a < 900) ic = a;
+    else if (a < 1800) { ic = 1800 - a; neg = 1; }
+    else if (a < 2700) { ic = a - 1800; neg = 1; }
+    else ic = 3600 - a;
+    MapSlot1 = RD_BANK;
+    v = ((const u16 *)RD_COSQ)[ic] >> 8;
+    MapSlot1 = old;
+    return neg ? -v : v;
+}
+static s16 fsin(u16 deg) { return fcos(deg + 270); }
+
+static void load_map(u8 n)
+{
+    const u8 *m;
+    u8 w, h, x, y, t;
+    slot2_map(map_bank[n]);
+    m = (const u8 *)map_addr[n];
+    w = m[0]; h = m[1];
+    /* copy through a small buffer: ROM and cart RAM share slot 2 */
+    for (y = 0; y < h; y++)
+    {
+        u8 row0[64], row2[64];
+        slot2_map(map_bank[n]);
+        memcpy(row0, m + 2 + (u16)y * w, w);
+        memcpy(row2, m + 2 + (u16)w * h + (u16)y * w, w);
+        slot2_map(SLOT2_CARTRAM);
+        for (x = 0; x < w; x++)
+        {
+            t = row0[x];
+            TILEMAP(x, y) = t < 71 ? t : 0;
+            if (row2[x] >= 1 && row2[x] <= 4)
+            {
+                px = x * 256 + 128; py = y * 256 + 128;
+                pangle = (u16)((5 - row2[x]) % 4) * 90;
+            }
+        }
+    }
+    slot2_map(SLOT2_CARTRAM);
+    memset((u8 *)CR_PAD, 0xFF, 32);
+    for (x = 0; x < MAPSIZE; x++)
+        for (y = 0; y < MAPSIZEY; y++)
+            if (x >= w || y >= h) TILEMAP(x, y) = 0xFF;
+    memset((u8 *)CR_SPOTVIS, 0, MAPSIZE * MAPSIZEY);
+}
+
+u8 bench_spr;
+u16 bench_n;                /* renders done (benchmarks) */
+u8  bench_mode;             /* 1 turn, 2 move, 3 static: scripted input */
+u16 bench_end;              /* bench: stop after this many renders */
+volatile u8 bench_go;       /* bench: render 2 waits for this */
+
+void main(void)
+{
+    u8 p, f0;
+    hw_init();
+    vdp_display(0);
+    slot2_map(SLOT2_CARTRAM);
+    memset((u8 *)0x8000, 0, 0x4000);
+    mapnum = 0;
+    load_map(mapnum);
+    vram_fill(0, 0, 0x3800);
+    {
+        u16 i;
+        vdp_set_addr(VRAM_NAMETABLE);
+        for (i = 0; i < 768; i++) { VDPData = TILE_BLANK & 0xFF; __asm__("nop"); VDPData = TILE_BLANK >> 8; }
+    }
+    render_init();
+    render_set_colors(8, 2);
+    cram_load(ega_palette_sms, 0, 16);
+    vdp_display(1);
+    r_handrows = HAND_ROWS;
+    for (;;)
+    {
+        f0 = frame_count;
+        if (bench_mode)
+        {
+            while (bench_n == 2 && !bench_go)
+                ;
+            while (bench_n >= bench_end)
+                ;
+            p = bench_mode == 1 ? PAD_LEFT :
+                bench_mode == 2 ? (((bench_n / 6) & 1) ? PAD_DOWN : PAD_UP) : 0;
+        }
+        else
+            p = pad_read();
+        if (p & PAD_LEFT) pangle += 6;
+        if (p & PAD_RIGHT) pangle += 360 - 6;
+        while (pangle >= 360) pangle -= 360;
+        if (p & (PAD_UP | PAD_DOWN))
+        {
+            s16 dx = fcos(pangle) / 8, dy = -fsin(pangle) / 8;
+            u16 nx, ny;
+            if (p & PAD_DOWN) { dx = -dx; dy = -dy; }
+            nx = px + dx; ny = py + dy;
+            if (!TILEMAP(nx >> 8, ny >> 8)) { px = nx; py = ny; }
+        }
+        r_viewx = px - fcos(pangle);
+        r_viewy = py + fsin(pangle);
+        r_fine = pangle * 10;
+        r_animframe = bench_mode ? 0 : (time_count & 8) >> 3;
+        numvis = 0;
+        if (bench_spr)
+        {
+            /* fixed test sprites (renderer check) */
+            vissprites[0].x0 = 72; vissprites[0].width = 80; vissprites[0].s = 40; vissprites[0].shape = bench_spr;
+            vissprites[1].x0 = 150; vissprites[1].width = 40; vissprites[1].s = 20; vissprites[1].shape = bench_spr + 30;
+            vissprites[2].x0 = -30; vissprites[2].width = 140; vissprites[2].s = 70; vissprites[2].shape = bench_spr + 60;
+            numvis = 3;
+        }
+        render_cast();
+        render_draw();
+        last_frames = frame_count - f0;
+        bench_n++;
+    }
+}

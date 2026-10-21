@@ -1,0 +1,16 @@
+symbols build/game.noi
+run 120
+print last_frames w1
+screenshot shots/r0.ppm
+hold left
+run 40
+release left
+run 30
+print last_frames w1
+screenshot shots/r1.ppm
+hold up
+run 60
+release up
+run 30
+screenshot shots/r2.ppm
+expectpace 0

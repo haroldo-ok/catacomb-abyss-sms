@@ -1,0 +1,24 @@
+symbols build/game.noi
+run 200
+tap 1
+run 120
+tap 1
+run 120
+tap 1
+run 120
+tap 1
+run 100
+screenshot /tmp/s/k_enter.ppm
+run 60
+screenshot /tmp/s/k_enter2.ppm
+waituntil ingame == 1 3000 w1
+run 200
+pause
+run 80
+screenshot /tmp/s/k_menu.ppm
+tap 1
+run 200
+screenshot /tmp/s/k_help.ppm
+tap right
+run 250
+screenshot /tmp/s/k_help2.ppm

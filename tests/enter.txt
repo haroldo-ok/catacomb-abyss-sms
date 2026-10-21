@@ -1,0 +1,15 @@
+symbols build/game.noi
+run 200
+tap 1
+run 120
+tap 1
+run 120
+tap 1
+run 120
+cgstart
+tap 1
+waituntil ingame == 1 3000 w1
+cgstop
+cgdump /tmp/s/cg_enter.txt
+print time_count w2
+screenshot /tmp/s/h_ingame.ppm

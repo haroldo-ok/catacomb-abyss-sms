@@ -1,0 +1,8 @@
+symbols build/game.noi
+run 60
+expectvdp display 1
+expectcolors 8
+screenshot shots/title.ppm
+tap 1
+run 30
+screenshot shots/next.ppm
